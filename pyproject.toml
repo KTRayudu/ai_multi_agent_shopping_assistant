@@ -1,0 +1,37 @@
+[project]
+name = "ai-engineering-bootcamp-prerequisites"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "google-genai>=1.57.0",
+    "groq>=1.0.0",
+    "ipykernel>=7.1.0",
+    "openai>=2.15.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "python-dotenv>=1.2.1",
+    "streamlit>=1.52.2",
+]
+
+[tool.uv.workspace]
+members = ["apps/api", "apps/chatbot_ui", "apps/items_mcp_server", "apps/reviews_mcp_server"]
+
+[dependency-groups]
+dev = [
+    "cohere>=5.20.1",
+    "fastembed>=0.7.4",
+    "langgraph-checkpoint-postgres>=3.0.4",
+    "langgraph>=1.0.5",
+    "langsmith>=0.6.2",
+    "matplotlib>=3.10.8",
+    "psycopg2-binary>=2.9.11",
+    "qdrant-client>=1.16.2",
+    "ragas>=0.4.2",
+    "psycopg-binary>=3.3.2",
+    "fastmcp>=2.14.4",
+    "litellm>=1.81.14",
+    "google-adk>=1.25.0",
+    "a2a-sdk>=0.3.24",
+]

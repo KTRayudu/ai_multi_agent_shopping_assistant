@@ -1,0 +1,20 @@
+[project]
+name = "reviews-mcp-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "aurimasgriciunas", email = "griciunas.aurimas@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=2.14.4",
+    "openai>=2.15.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "qdrant-client>=1.16.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
