@@ -34,4 +34,6 @@ dev = [
     "litellm>=1.81.14",
     "google-adk>=1.25.0",
     "a2a-sdk>=0.3.24",
+    "ipykernel>=7.1.0",
+    "jupyter>=1.1.1",
 ]
