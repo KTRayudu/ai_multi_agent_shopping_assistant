@@ -1,41 +1,118 @@
 from qdrant_client import QdrantClient
 import openai
 from server.core.config import config
+import google.generativeai as genai
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+import os
 
 
-def create_embeddings(text, model="text-embedding-3-small"):
-    response = openai.embeddings.create(
-        model=model,
-        input=text
+
+# def create_embeddings(text, model="text-embedding-3-small"):
+#     response = openai.embeddings.create(
+#         model=model,
+#         input=text
+#     )
+#     return response.data[0].embedding
+
+
+# Load API key
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY:
+    raise ValueError("GOOGLE_API_KEY not found in .env file!")
+
+# Initialize client
+gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
+
+# 3. Define the embedding function with custom dimensionality
+def get_embedding(text, model="gemini-embedding-001",):
+    """
+    Generates an embedding vector for the given text using Gemini's current model.
+    """
+    response = gemini_client.models.embed_content(
+        model="gemini-embedding-001", 
+        contents=text,
+        config=types.EmbedContentConfig(
+        #     task_type=task_type
+        #     # 🔴 THE FIX: Force the output to be exactly 1536 dimensions
+        #     # output_dimensionality=1536  
+        )
     )
-    return response.data[0].embedding
+    
+    return response.embeddings[0].values
 
 
-def retrieve_embedding_data(qd_client: QdrantClient, query, collection_name, k=5):
-    response = qd_client.query_points(
-        collection_name=collection_name,
-        query=create_embeddings(query),
-        limit=k
+# def retrieve_embedding_data(qd_client: QdrantClient, query, collection_name, k=5):
+#     response = qd_client.query_points(
+#         collection_name=collection_name,
+#         query=create_embeddings(query),
+#         limit=k
+#     )
+
+#     retrieved_context_ids = []
+#     retrieved_context = []
+#     retrieved_scores = []
+#     retrieved_context_ratings = []
+    
+#     for point in response.points:
+#         retrieved_context_ids.append(point.payload["parent_asin"])
+#         retrieved_context.append(point.payload["description"])
+#         retrieved_scores.append(point.score)
+#         retrieved_context_ratings.append(point.payload["average_rating"])
+
+#     # return dictionary of retrieved data
+#     return {
+#         "context_ids": retrieved_context_ids,
+#         "context": retrieved_context,
+#         "scores": retrieved_scores,
+#         "context_ratings": retrieved_context_ratings
+#     }
+
+
+
+
+def retrieve_data(query, qdrant_client, k=5):
+
+    query_embedding = get_embedding(query)
+
+    results = qdrant_client.query_points(
+        collection_name="Amazon-items-collection-03",
+        query=query_embedding,
+        limit=k,
     )
 
     retrieved_context_ids = []
     retrieved_context = []
-    retrieved_scores = []
+    similarity_scores = []
     retrieved_context_ratings = []
-    
-    for point in response.points:
-        retrieved_context_ids.append(point.payload["parent_asin"])
-        retrieved_context.append(point.payload["description"])
-        retrieved_scores.append(point.score)
-        retrieved_context_ratings.append(point.payload["average_rating"])
 
-    # return dictionary of retrieved data
+    for result in results.points:
+        retrieved_context_ids.append(result.payload["parent_asin"])
+        retrieved_context.append(result.payload["description"])
+        retrieved_context_ratings.append(result.payload["average_rating"])
+        similarity_scores.append(result.score)
+
     return {
-        "context_ids": retrieved_context_ids,
-        "context": retrieved_context,
-        "scores": retrieved_scores,
-        "context_ratings": retrieved_context_ratings
+        "retrieved_context_ids": retrieved_context_ids,
+        "retrieved_context": retrieved_context,
+        "retrieved_context_ratings": retrieved_context_ratings,
+        "similarity_scores": similarity_scores,
     }
+
+
+
+
+def process_context(context):
+
+    formatted_context = ""
+
+    for id, chunk, rating in zip(context["retrieved_context_ids"], context["retrieved_context"], context["retrieved_context_ratings"]):
+        formatted_context += f"- ID: {id}, rating: {rating}, description: {chunk}\n"
+
+    return formatted_context
+
 
 def format_context(retrived_context):
     formatted_context = ""

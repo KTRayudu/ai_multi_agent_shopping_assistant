@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException
-from server.api.models import RAGRequest, RAGResponse
+from server.api.models1 import RAGRequest, RAGResponse
 import logging
 from server.agents.retrieval_generation1 import integrated_rag_pipeline
 
