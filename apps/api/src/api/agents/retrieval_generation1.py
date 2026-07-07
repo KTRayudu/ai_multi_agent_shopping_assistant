@@ -114,59 +114,159 @@ def process_context(context):
     return formatted_context
 
 
-def format_context(retrived_context):
-    formatted_context = ""
-    for id, chunk, rating in zip(retrived_context["context_ids"], retrived_context["context"], retrived_context["context_ratings"]):
-        formatted_context += f"Product ID: {id}, rating: {rating}, description: {chunk.strip()}\n"
-    return formatted_context
 
 def build_prompt(preprocessed_context, question):
+
     prompt = f"""
-You are a specialized Product Expert Assistant. Your goal is to answer customer questions accurately using ONLY the provided product information.
+You are a shopping assistant that can answer questions about the products in stock.
 
-### Instructions:
-1. **Source of Truth:** Answer strictly based on the provided "Available Products" section below. Do not use outside knowledge or make assumptions.
-2. **Handling Missing Info:** If the answer cannot be found in the provided products, politely state that you do not have that information. Do not make up features.
-3. **Tone:** Be helpful, professional, and concise.
-4. **Terminology:** Never refer to the text below as "context" or "data." Refer to it naturally as "our current inventory" or "available products."
+You will be given a question and a list of context.
 
-### Available Products:
-<inventory_data>
+Instructtions:
+- You need to answer the question based on the provided context only.
+- Never use word context and refer to it as the available products.
+
+Context:
 {preprocessed_context}
-</inventory_data>
 
-### Customer Question:
+Question:
 {question}
-
-### Answer:
 """
+
     return prompt
 
-def generate_llm_response(prompt, model="gpt-5-nano"):
-    response = openai.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": prompt},
-        ]
-    )
-    return response.choices[0].message.content
 
-def integrated_rag_pipeline(question, model="gpt-5-nano"):
+
+# def generate_answer(prompt):
+
+#     response = openai.chat.completions.create(
+#         model="gpt-5-nano",
+#         messages=[{"role": "system", "content": prompt}],
+#         reasoning_effort="minimal"
+#     )
+
+#     return response.choices[0].message.content
+
+
+# AVAILABLE MODELS FOR gemini_client.models.generate_content:
+# -----------------------------------------------------------
+# "gemini-2.5-flash"        : Best for speed, low latency, and general tasks.
+# "gemini-2.0-flash"        : High-speed, versatile, supports multi-modal input.
+# "gemini-2.0-pro-exp-02-05": High performance, complex reasoning, and deep analysis.
+# "gemini-2.0-flash-thinking-exp": Specialized for reasoning, math, and code logic.
+# "gemini-1.5-flash"        : Legacy fast model, still widely used.
+# "gemini-1.5-pro"          : Deep context understanding and complex multi-step reasoning.
+# -----------------------------------------------------------
+
+def generate_answer(prompt, model_name="gemini-2.5-flash"):
+    """
+    Generates a response using the specified Gemini model.
+    """
+    response = gemini_client.models.generate_content(
+        model=model_name,
+        contents=prompt,
+        # You can add config here if you need system instructions or temperature control
+    )
     
-    qdrant_client = QdrantClient(   
-        url=config.qdrant_url,
-    )
-    # Step 1: Retrieve relevant context
-    retrieved_context = retrieve_embedding_data(
-        qdrant_client,
-        question,
-        collection_name="amazon_items-collection-00",
-        k=5
-    )
-    # Step 2: Format context
-    formatted_context = format_context(retrieved_context)   
-    # Step 3: Build prompt
-    prompt = build_prompt(formatted_context, question)
-    # Step 4: Generate response
-    response = generate_llm_response(prompt, model)
-    return response
+    return response.text
+
+
+
+
+
+
+
+def rag_pipeline(question, top_k=5):
+
+    qdrant_client = QdrantClient(url="http://localhost:6333")
+
+    retrieved_context = retrieve_data(question, qdrant_client, top_k)
+    preprocessed_context = process_context(retrieved_context)
+    prompt = build_prompt(preprocessed_context, question)
+    answer = generate_answer(prompt)
+
+    return answer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def format_context(retrived_context):
+#     formatted_context = ""
+#     for id, chunk, rating in zip(retrived_context["context_ids"], retrived_context["context"], retrived_context["context_ratings"]):
+#         formatted_context += f"Product ID: {id}, rating: {rating}, description: {chunk.strip()}\n"
+#     return formatted_context
+
+# def build_prompt(preprocessed_context, question):
+#     prompt = f"""
+# You are a specialized Product Expert Assistant. Your goal is to answer customer questions accurately using ONLY the provided product information.
+
+# ### Instructions:
+# 1. **Source of Truth:** Answer strictly based on the provided "Available Products" section below. Do not use outside knowledge or make assumptions.
+# 2. **Handling Missing Info:** If the answer cannot be found in the provided products, politely state that you do not have that information. Do not make up features.
+# 3. **Tone:** Be helpful, professional, and concise.
+# 4. **Terminology:** Never refer to the text below as "context" or "data." Refer to it naturally as "our current inventory" or "available products."
+
+# ### Available Products:
+# <inventory_data>
+# {preprocessed_context}
+# </inventory_data>
+
+# ### Customer Question:
+# {question}
+
+# ### Answer:
+# """
+#     return prompt
+
+# def generate_llm_response(prompt, model="gpt-5-nano"):
+#     response = openai.chat.completions.create(
+#         model=model,
+#         messages=[
+#             {"role": "system", "content": prompt},
+#         ]
+#     )
+#     return response.choices[0].message.content
+
+# def integrated_rag_pipeline(question, model="gpt-5-nano"):
+    
+#     qdrant_client = QdrantClient(   
+#         url=config.qdrant_url,
+#     )
+#     # Step 1: Retrieve relevant context
+#     retrieved_context = retrieve_embedding_data(
+#         qdrant_client,
+#         question,
+#         collection_name="amazon_items-collection-00",
+#         k=5
+#     )
+#     # Step 2: Format context
+#     formatted_context = format_context(retrieved_context)   
+#     # Step 3: Build prompt
+#     prompt = build_prompt(formatted_context, question)
+#     # Step 4: Generate response
+#     response = generate_llm_response(prompt, model)
+#     return response
